@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>MiniTwit — Login</title>
+<style>
+  :root{
+    --bg:#0f1724; --card:#0b1220; --accent:#1da1f2; --muted:#9aa6b2; --glass: rgba(255,255,255,0.03);
+    --radius:12px;
+  }
+  *{box-sizing:border-box;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial}
+  body{
+    margin:0;background:linear-gradient(180deg,#071029 0%, #0f1b2a 100%);color:#e6eef6;
+    min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;
+  }
+  .wrap{
+    width:100%;max-width:980px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    border-radius:16px;padding:28px;display:grid;grid-template-columns:420px 1fr;gap:20px;box-shadow: 0 8px 30px rgba(2,6,23,0.7);
+  }
+  .brand{display:flex;flex-direction:column;gap:16px;align-items:flex-start}
+  .logo{
+    width:56px;height:56px;border-radius:12px;background:linear-gradient(135deg,#2bb0ff,#5ca3ff);display:flex;align-items:center;justify-content:center;font-weight:700;color:#022;box-shadow: 0 6px 18px rgba(45,120,255,0.18);
+  }
+  h1{margin:0;font-size:20px}
+  p.lead{margin:0;color:var(--muted)}
+  .panel{background:var(--card);padding:18px;border-radius:12px;width:100%}
+  label{display:block;margin-top:8px;color:var(--muted);font-size:13px}
+  input,select,button,textarea{
+    width:100%;padding:10px 12px;margin-top:6px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);
+    background:transparent;color:inherit;font-size:14px;outline:none;
+  }
+  .users-list{display:grid;gap:10px;margin-top:10px}
+  .user-item{display:flex;align-items:center;gap:12px;padding:10px;border-radius:10px;background:var(--glass);cursor:pointer}
+  .avatar{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:#e6eef6;color:#022;font-weight:700}
+  .meta{flex:1}
+  .btn{
+    background:var(--accent);border:none;padding:11px 14px;border-radius:10px;font-weight:600;color:#052431;cursor:pointer;margin-top:12px;
+  }
+  .or{color:var(--muted);text-align:center;margin:8px 0}
+  footer{grid-column:1 / -1;color:var(--muted);font-size:13px;text-align:center;margin-top:10px}
+  @media(max-width:900px){ .wrap{grid-template-columns:1fr; padding:16px} }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="brand">
+      <div class="logo">MT</div>
+      <h1>MiniTwit</h1>
+      <p class="lead">A lightweight Twitter-like demo — post, like, comment, follow and edit profiles. All stored in your browser.</p>
+
+      <div class="panel" style="margin-top:8px;">
+        <label>Choose an existing demo user</label>
+        <div id="users" class="users-list"></div>
+
+        <div class="or">Or create a new user</div>
+        <label>Name</label>
+        <input id="newName" placeholder="Your name (e.g. Ali Khan)" />
+        <label>Handle</label>
+        <input id="newHandle" placeholder="handle (no @, e.g. alikhan)" />
+        <label>Bio</label>
+        <input id="newBio" placeholder="Short bio..." />
+        <button id="createBtn" class="btn">Create & Sign in</button>
+      </div>
+    </div>
+
+    <div>
+      <div class="panel">
+        <h3 style="margin:0 0 8px 0">What this demo supports</h3>
+        <ul style="margin:0 0 8px 18px;color:var(--muted);">
+          <li>Post tweets (280 char limit), edit & delete</li>
+          <li>Like & comment on tweets</li>
+          <li>Follow / Unfollow users — your feed shows followed users + you</li>
+          <li>Profile page with edit profile</li>
+          <li>All data saved in localStorage (so it persists locally)</li>
+        </ul>
+        <div style="color:var(--muted)">Open with different browser/profiles to try multiple users at once.</div>
+      </div>
+
+      <div style="margin-top:14px" class="panel">
+        <h4 style="margin:0 0 10px 0">Quick tips</h4>
+        <ol style="color:var(--muted);margin:0 0 0 18px">
+          <li>Click a user to sign in as them.</li>
+          <li>Use the top bar on the feed to post, search, or go to your profile.</li>
+          <li>Follow someone from their profile or follower card.</li>
+        </ol>
+      </div>
+    </div>
+
+    <footer>Built with ❤️ — Local demo (no backend). Files: login.html, index.html, profile.html, about.html (optional).</footer>
+  </div>
+
+<script>
+// Initialize demo data in localStorage if missing
+function id(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7) }
+
+const sampleUsers = [
+  {id:'u_alex', name:'Alex Noor', handle:'alex', bio:'Frontend tinkerer', avatarColor:'#ffd166', following:[], followers:[]},
+  {id:'u_ali', name:'Ali Khan', handle:'alikhan', bio:'Student | coder', avatarColor:'#7ee787', following:[], followers:[]},
+  {id:'u_sana', name:'Sana R', handle:'sana', bio:'Designer', avatarColor:'#a0c4ff', following:[], followers:[]},
+];
+
+const sampleTweets = [
+  {id:'t1', userId:'u_alex', text:'Hello MiniTwit! This is a sample tweet. ❤️', ts:Date.now()-1000*60*60*6, likes:[], comments:[]},
+  {id:'t2', userId:'u_ali', text:'Working on a cool project — JS and CSS only!', ts:Date.now()-1000*60*20, likes:['u_alex'], comments:[{id:id(),userId:'u_alex',text:'Nice!'}]},
+  {id:'t3', userId:'u_sana', text:'Designing a soft UI today ✨', ts:Date.now()-1000*60*60*24, likes:[], comments:[]}
+];
+
+function getLS(k){ try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}}
+function setLS(k,v){ localStorage.setItem(k,JSON.stringify(v)) }
+
+if(!getLS('mt_users')) {
+  setLS('mt_users', sampleUsers);
+}
+if(!getLS('mt_tweets')) {
+  setLS('mt_tweets', sampleTweets);
+}
+// set an initial current user if none
+const users = getLS('mt_users');
+if(!getLS('mt_current')) {
+  setLS('mt_current', users[0].id);
+}
+
+function renderUsers(){
+  const list = document.getElementById('users');
+  list.innerHTML='';
+  (getLS('mt_users')||[]).forEach(u=>{
+    const div = document.createElement('div');
+    div.className='user-item';
+    div.innerHTML = `<div class="avatar" style="background:${u.avatarColor}">${u.name.split(' ').map(s=>s[0]).slice(0,2).join('')}</div>
+      <div class="meta"><div style="font-weight:700">${u.name} <span style="color:var(--muted);font-weight:500"> @${u.handle}</span></div><div style="color:var(--muted);font-size:13px">${u.bio||''}</div></div>
+      <div><button style="background:transparent;border:1px solid rgba(255,255,255,0.04);color:var(--muted);padding:6px 8px;border-radius:8px">Use</button></div>`;
+    div.addEventListener('click', ()=>{
+      setLS('mt_current', u.id);
+      window.location.href = 'index.html';
+    });
+    list.appendChild(div);
+  })
+}
+renderUsers();
+
+document.getElementById('createBtn').addEventListener('click', ()=>{
+  const name = document.getElementById('newName').value.trim();
+  const handle = document.getElementById('newHandle').value.trim();
+  const bio = document.getElementById('newBio').value.trim();
+  if(!name||!handle){ alert('Please fill name and handle'); return; }
+  const users = getLS('mt_users')||[];
+  if(users.some(x=>x.handle.toLowerCase()===handle.toLowerCase())){ alert('Handle taken'); return; }
+  const newUser = { id: 'u_'+handle+'_'+Math.random().toString(36).slice(2,6), name, handle, bio, avatarColor: ['#ffd166','#7ee787','#a0c4ff','#fda4af','#c7b4ff'][Math.floor(Math.random()*5)], following:[], followers:[] };
+  users.push(newUser);
+  setLS('mt_users', users);
+  setLS('mt_current', newUser.id);
+  window.location.href = 'index.html';
+});
+</script>
+</body>
+</html>
