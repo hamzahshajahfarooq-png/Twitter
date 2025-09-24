@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>MiniTwit — Feed</title>
+<style>
+  :root{
+    --bg:#071029; --card:#071829; --panel:#0e2333; --accent:#1da1f2; --muted:#9fb3c6;
+    --radius:12px;
+  }
+  *{box-sizing:border-box;font-family:Inter,system-ui,Segoe UI,Roboto,Arial}
+  body{margin:0;background:linear-gradient(180deg,#051423 0%, #07182a 100%);color:#e6eef6;min-height:100vh;}
+  header{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));backdrop-filter: blur(6px)}
+  .brand{display:flex;gap:12px;align-items:center}
+  .logo{width:44px;height:44px;border-radius:10px;background:linear-gradient(45deg,#2bb0ff,#5ca3ff);display:flex;align-items:center;justify-content:center;font-weight:700;color:#022}
+  .search{max-width:520px;flex:1;margin:0 16px}
+  .search input{width:100%;padding:10px 12px;border-radius:12px;border:none;background:transparent;color:inherit;border:1px solid rgba(255,255,255,0.03)}
+  .top-actions{display:flex;gap:10px;align-items:center}
+  .btn{background:var(--accent);color:#052431;border:none;padding:9px 12px;border-radius:10px;cursor:pointer;font-weight:600}
+  main{display:grid;grid-template-columns:320px 1fr 320px;gap:18px;padding:20px;max-width:1200px;margin:0 auto}
+  .col{border-radius:14px}
+  .left, .right{position:sticky;top:18px}
+  .panel{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));padding:14px;border-radius:12px}
+  .tweet-box{background:var(--panel);padding:12px;border-radius:12px;display:flex;gap:12px;align-items:flex-start}
+  textarea{width:100%;min-height:70px;resize:none;border-radius:10px;padding:8px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:inherit}
+  .tweet{background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005));padding:12px;border-radius:12px;display:flex;gap:12px;margin-bottom:12px}
+  .avatar{width:56px;height:56px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:700}
+  .meta{flex:1}
+  .meta .who{font-weight:700}
+  .meta .handle{color:var(--muted);font-size:13px;margin-left:8px}
+  .meta .time{color:var(--muted);font-size:12px;margin-top:4px}
+  .actions{display:flex;gap:10px;color:var(--muted);margin-top:8px;font-size:13px}
+  .action-btn{cursor:pointer;padding:6px;border-radius:8px}
+  .follow-btn{background:transparent;border:1px solid rgba(255,255,255,0.04);padding:8px;border-radius:10px;color:var(--muted);cursor:pointer}
+  .small{font-size:13px;color:var(--muted)}
+  footer{color:var(--muted);text-align:center;padding:20px}
+  @media(max-width:1000px){ main{grid-template-columns:1fr;padding:14px} .left, .right{position:static} .logo{display:none} .search{order:1} }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="logo">MT</div>
+    <div>
+      <div style="font-weight:700" id="curName">MiniTwit</div>
+      <div style="font-size:13px;color:var(--muted)" id="curHandle">@demo</div>
+    </div>
+  </div>
+
+  <div class="search">
+    <input id="searchInput" placeholder="Search tweets or handles..." />
+  </div>
+
+  <div class="top-actions">
+    <button class="btn" id="profileBtn">Profile</button>
+    <button class="btn" id="logoutBtn" style="background:transparent;border:1px solid rgba(255,255,255,0.04);color:var(--muted)">Switch</button>
+  </div>
+</header>
+
+<main>
+  <aside class="col left">
+    <div class="panel left" style="margin-bottom:12px">
+      <div style="display:flex;gap:12px;align-items:center">
+        <div id="leftAvatar" class="avatar" style="width:64px;height:64px;border-radius:12px"></div>
+        <div>
+          <div style="font-weight:800" id="leftName"></div>
+          <div class="small" id="leftHandle"></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:12px;margin-top:12px">
+        <div class="small"><span id="cntTweets">0</span> Tweets</div>
+        <div class="small"><span id="cntFollowers">0</span> Followers</div>
+        <div class="small"><span id="cntFollowing">0</span> Following</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h4 style="margin:0 0 8px 0">Who to follow</h4>
+      <div id="whoList"></div>
+    </div>
+  </aside>
+
+  <section class="col center">
+    <div class="panel" style="margin-bottom:12px">
+      <div class="tweet-box">
+        <div id="composerAvatar" class="avatar" style="width:56px;height:56px;border-radius:12px"></div>
+        <div style="flex:1">
+          <textarea id="tweetText" maxlength="280" placeholder="What's happening? (280 chars)"></textarea>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px">
+            <div class="small" id="charCount">0 / 280</div>
+            <div>
+              <button class="btn" id="postBtn">Post</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="feed" class="panel" style="padding:14px"></div>
+  </section>
+
+  <aside class="col right">
+    <div class="panel">
+      <h4 style="margin:0 0 8px 0">About</h4>
+      <div class="small">This is a client-side demo. Data is stored locally in your browser's localStorage.</div>
+      <hr style="border:none;height:1px;background:rgba(255,255,255,0.02);margin:10px 0" />
+      <button class="follow-btn" id="clearBtn" style="width:100%">Reset demo data</button>
+    </div>
+  </aside>
+</main>
+
+<footer>MiniTwit demo • Responsive • Built with HTML, CSS & JS only</footer>
+
+<script>
+/* Utilities & storage helpers */
+function getLS(k){ try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}}
+function setLS(k,v){ localStorage.setItem(k,JSON.stringify(v)) }
+function timeAgo(ts){
+  const s = Math.floor((Date.now()-ts)/1000);
+  if(s<60) return s+'s';
+  const m=Math.floor(s/60); if(m<60) return m+'m';
+  const h=Math.floor(m/60); if(h<24) return h+'h';
+  const d=Math.floor(h/24); return d+'d';
+}
+function qsel(s,el=document){return el.querySelector(s)}
+function qselAll(s,el=document){return el.querySelectorAll(s)}
+
+/* Ensure initial data exists (copied from login demo) */
+if(!getLS('mt_users')||!getLS('mt_tweets')) {
+  window.location.href='login.html';
+}
+
+// Current user
+let currentUserId = getLS('mt_current');
+if(!currentUserId){ window.location.href='login.html'; }
+let users = getLS('mt_users')||[];
+let tweets = getLS('mt_tweets')||[];
+
+/* Render header profile */
+function curUser(){ return (getLS('mt_users')||[]).find(u=>u.id===getLS('mt_current')) }
+function renderHeader(){
+  const u = curUser();
+  if(!u) return;
+  qsel('#curName').textContent = u.name;
+  qsel('#curHandle').textContent = '@'+u.handle;
+  qsel('#leftName').textContent = u.name;
+  qsel('#leftHandle').textContent = '@'+u.handle;
+  qsel('#leftAvatar').textContent = u.name.split(' ').map(x=>x[0]).slice(0,2).join('');
+  qsel('#leftAvatar').style.background = u.avatarColor;
+  qsel('#composerAvatar').textContent = qsel('#leftAvatar').textContent;
+  qsel('#composerAvatar').style.background = u.avatarColor;
+  const myTweets = tweets.filter(t=>t.userId===u.id);
+  qsel('#cntTweets').textContent = myTweets.length;
+  // followers/following counts
+  qsel('#cntFollowers').textContent = (u.followers||[]).length;
+  qsel('#cntFollowing').textContent = (u.following||[]).length;
+}
+renderHeader();
+
+/* Tweet posting */
+qsel('#tweetText').addEventListener('input', (e)=>{
+  qsel('#charCount').textContent = e.target.value.length + ' / 280';
+});
+qsel('#postBtn').addEventListener('click', ()=>{
+  const txt = qsel('#tweetText').value.trim();
+  if(!txt) return alert('Write something first.');
+  const id = 't_'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+  const newT = { id, userId: getLS('mt_current'), text: txt, ts: Date.now(), likes:[], comments:[] };
+  tweets.unshift(newT);
+  setLS('mt_tweets', tweets);
+  qsel('#tweetText').value=''; qsel('#charCount').textContent='0 / 280';
+  renderFeed();
+  renderHeader();
+});
+
+/* Search */
+qsel('#searchInput').addEventListener('input', (e)=>{
+  renderFeed(e.target.value.trim().toLowerCase());
+});
+
+/* Profile & logout */
+qsel('#profileBtn').addEventListener('click', ()=> {
+  const u = curUser();
+  window.location.href = 'profile.html?user='+u.handle;
+});
+qsel('#logoutBtn').addEventListener('click', ()=> { window.location.href='login.html' });
+
+/* Reset demo */
+qsel('#clearBtn').addEventListener('click', ()=>{
+  if(!confirm('Reset demo data? This will clear users & tweets from localStorage.')) return;
+  localStorage.removeItem('mt_users');
+  localStorage.removeItem('mt_tweets');
+  localStorage.removeItem('mt_current');
+  window.location.href='login.html';
+});
+
+/* Who to follow */
+function renderWho(){
+  const u = curUser();
+  const list = qsel('#whoList'); list.innerHTML='';
+  (getLS('mt_users')||[]).filter(x=>x.id!==u.id).slice(0,6).forEach(person=>{
+    const btnText = (u.following||[]).includes(person.id) ? 'Following' : 'Follow';
+    const item = document.createElement('div');
+    item.style.display='flex'; item.style.alignItems='center'; item.style.justifyContent='space-between';
+    item.style.padding='8px 0';
+    item.innerHTML = `<div style="display:flex;align-items:center;gap:10px">
+      <div class="avatar" style="width:46px;height:46px;border-radius:10px;background:${person.avatarColor}">${person.name.split(' ').map(s=>s[0]).slice(0,2).join('')}</div>
+      <div>
+        <div style="font-weight:700">${person.name} <span style="color:var(--muted);font-weight:500"> @${person.handle}</span></div>
+        <div class="small" style="color:var(--muted)">${person.bio||''}</div>
+      </div>
+    </div>
+    <div>
+      <button class="follow-btn">${btnText}</button>
+    </div>`;
+    item.querySelector('button').addEventListener('click', ()=>{
+      toggleFollow(person.id);
+      renderWho();
+      renderFeed();
+      renderHeader();
+    });
+    item.querySelector('.avatar').addEventListener('click', ()=>{ window.location.href='profile.html?user='+person.handle });
+    list.appendChild(item);
+  })
+}
+function toggleFollow(targetId){
+  let users = getLS('mt_users')||[];
+  const meId = getLS('mt_current');
+  const me = users.find(u=>u.id===meId);
+  const target = users.find(u=>u.id===targetId);
+  if(!me || !target) return;
+  me.following = me.following||[];
+  target.followers = target.followers||[];
+  if(me.following.includes(targetId)){
+    me.following = me.following.filter(x=>x!==targetId);
+    target.followers = target.followers.filter(x=>x!==meId);
+  } else {
+    me.following.push(targetId);
+    target.followers.push(meId);
+  }
+  setLS('mt_users', users);
+}
+
+/* Feed rendering */
+function renderFeed(q=''){
+  users = getLS('mt_users')||[];
+  tweets = getLS('mt_tweets')||[];
+  const feedEl = qsel('#feed'); feedEl.innerHTML='';
+  const me = curUser();
+  // Feed = tweets by me + users I follow. Sort by ts desc
+  const showIds = new Set([me.id, ...(me.following||[])]);
+  let feed = tweets.filter(t=> showIds.has(t.userId));
+  if(q){
+    feed = feed.filter(t => t.text.toLowerCase().includes(q) || (users.find(u=>u.id===t.userId).handle||'').toLowerCase().includes(q));
+  }
+  feed.sort((a,b)=>b.ts-a.ts);
+  if(feed.length===0) feedEl.innerHTML = `<div class="small" style="color:var(--muted)">No tweets yet. Follow users or post one!</div>`;
+  feed.forEach(t=>{
+    const author = users.find(u=>u.id===t.userId) || {name:'Unknown', handle:'unknown', avatarColor:'#888'};
+    const div = document.createElement('div');
+    div.className='tweet';
+    div.innerHTML = `<div class="avatar" style="background:${author.avatarColor}">${author.name.split(' ').map(s=>s[0]).slice(0,2).join('')}</div>
+      <div class="meta">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div>
+            <span class="who">${author.name}</span>
+            <span class="handle">@${author.handle}</span>
+            <span class="time"> · ${timeAgo(t.ts)}</span>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            ${ t.userId===me.id ? '<button class="follow-btn" data-edit> Edit </button>' : '' }
+            ${ t.userId===me.id ? '<button class="follow-btn" data-delete style="background:#ff6b6b;color:#02121b">Delete</button>' : '' }
+          </div>
+        </div>
+
+        <div style="margin-top:8px;font-size:15px" class="tweet-text">${escapeHtml(t.text)}</div>
+
+        <div class="actions">
+          <div class="action-btn like" data-id="${t.id}">❤️ <span class="count">${t.likes.length}</span></div>
+          <div class="action-btn comment" data-id="${t.id}">💬 <span class="count">${t.comments.length}</span></div>
+          <div class="action-btn view-profile" data-user="${author.handle}">👤 View profile</div>
+        </div>
+
+        <div class="comments" style="margin-top:8px"></div>
+      </div>`;
+    // events
+    div.querySelectorAll('.view-profile').forEach(b=> b.addEventListener('click', ()=> window.location.href='profile.html?user='+b.getAttribute('data-user')));
+    div.querySelectorAll('[data-delete]').forEach(b=>{
+      b.addEventListener('click', ()=>{
+        if(!confirm('Delete this tweet?')) return;
+        tweets = tweets.filter(x=>x.id!==t.id);
+        setLS('mt_tweets', tweets);
+        renderFeed();
+        renderHeader();
+      });
+    });
+    div.querySelectorAll('[data-edit]').forEach(b=>{
+      b.addEventListener('click', ()=>{
+        const newText = prompt('Edit your tweet (280 chars)', t.text);
+        if(newText===null) return;
+        const textTrim = newText.trim();
+        if(!textTrim) return alert('Tweet cannot be empty.');
+        tweets = tweets.map(x => x.id===t.id ? {...x, text:textTrim, ts:Date.now()} : x);
+        setLS('mt_tweets', tweets);
+        renderFeed();
+      });
+    });
+    div.querySelectorAll('.like').forEach(b=>{
+      b.addEventListener('click', ()=>{
+        const tid = b.getAttribute('data-id');
+        const uid = getLS('mt_current');
+        tweets = getLS('mt_tweets')||[];
+        const tw = tweets.find(x=>x.id===tid);
+        if(!tw) return;
+        tw.likes = tw.likes||[];
+        if(tw.likes.includes(uid)) tw.likes = tw.likes.filter(x=>x!==uid);
+        else tw.likes.push(uid);
+        setLS('mt_tweets', tweets);
+        renderFeed();
+      });
+    });
+    div.querySelectorAll('.comment').forEach(b=>{
+      b.addEventListener('click', ()=>{
+        const tid = b.getAttribute('data-id');
+        const text = prompt('Write a comment:');
+        if(!text) return;
+        tweets = getLS('mt_tweets')||[];
+        const tw = tweets.find(x=>x.id===tid);
+        tw.comments = tw.comments||[];
+        tw.comments.push({ id: 'c_'+Date.now().toString(36), userId: getLS('mt_current'), text, ts: Date.now() });
+        setLS('mt_tweets', tweets);
+        renderFeed();
+      });
+    });
+
+    // render comments
+    const cmDiv = div.querySelector('.comments');
+    if(t.comments && t.comments.length>0){
+      t.comments.slice(-3).forEach(c=>{
+        const cu = users.find(u=>u.id===c.userId) || {name:'?'};
+        const el = document.createElement('div');
+        el.style.fontSize='13px'; el.style.marginTop='6px'; el.style.color='var(--muted)';
+        el.innerHTML = `<strong style="color:#fff">${cu.name}</strong> <span style="color:var(--muted)">@${cu.handle}</span> · <span style="color:var(--muted)">${timeAgo(c.ts)}</span><div style="margin-top:4px">${escapeHtml(c.text)}</div>`;
+        cmDiv.appendChild(el);
+      });
+    }
+
+    feedEl.appendChild(div);
+  });
+
+  renderWho();
+}
+
+/* helpers */
+function escapeHtml(s){ return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;') }
+
+renderFeed();
+
+/* Responsive navigation: allow click on avatar left */
+qsel('#leftAvatar').addEventListener('click', ()=> qsel('#profileBtn').click());
+
+</script>
+</body>
+</html>
