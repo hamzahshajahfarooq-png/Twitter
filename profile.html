@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>MiniTwit — Profile</title>
+<style>
+  :root{--bg:#071429;--card:#081b2b;--accent:#1da1f2;--muted:#9fb3c6}
+  *{box-sizing:border-box;font-family:Inter,system-ui,Segoe UI,Roboto,Arial}
+  body{margin:0;background:linear-gradient(180deg,#04111a,#071529);color:#eaf2f8;min-height:100vh}
+  header{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;background:rgba(255,255,255,0.01)}
+  .logo{font-weight:800}
+  main{max-width:1000px;margin:18px auto;padding:0 18px;display:grid;grid-template-columns:1fr 360px;gap:18px}
+  .panel{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));padding:14px;border-radius:12px}
+  .cover{height:140px;border-radius:10px;background:linear-gradient(90deg,#0b2940,#08354a);margin-bottom: -40px;position:relative}
+  .profile-card{display:flex;gap:12px;align-items:flex-end;padding:12px}
+  .avatar{width:100px;height:100px;border-radius:14px;border:4px solid var(--card);font-weight:800;font-size:22px;display:flex;align-items:center;justify-content:center}
+  .bio{color:var(--muted);margin-top:6px}
+  .follow-btn{background:var(--accent);color:#052431;border:none;padding:8px 12px;border-radius:10px;cursor:pointer}
+  .small{font-size:13px;color:var(--muted)}
+  .tweet{padding:12px;border-radius:12px;background:rgba(255,255,255,0.01);margin-bottom:12px}
+  @media(max-width:900px){ main{grid-template-columns:1fr} .avatar{width:84px;height:84px} }
+</style>
+</head>
+<body>
+<header>
+  <div style="display:flex;gap:12px;align-items:center">
+    <div class="logo">MiniTwit</div>
+    <div style="color:var(--muted)">Profile</div>
+  </div>
+  <div>
+    <button onclick="window.location.href='index.html'" class="follow-btn" style="background:transparent;border:1px solid rgba(255,255,255,0.04);color:var(--muted)">Back to Feed</button>
+    <button id="editProfileBtn" class="follow-btn">Edit profile</button>
+  </div>
+</header>
+
+<main>
+  <section>
+    <div class="panel">
+      <div class="cover"></div>
+      <div class="profile-card" style="margin-top:8px">
+        <div id="profileAvatar" class="avatar">AA</div>
+        <div style="flex:1">
+          <div style="font-weight:800;font-size:20px" id="profileName">Name</div>
+          <div class="small" id="profileHandle">@handle</div>
+          <div class="bio" id="profileBio">Bio goes here</div>
+          <div style="display:flex;gap:12px;margin-top:10px">
+            <div class="small"><strong id="pTweets">0</strong> Tweets</div>
+            <div class="small"><strong id="pFollowers">0</strong> Followers</div>
+            <div class="small"><strong id="pFollowing">0</strong> Following</div>
+          </div>
+        </div>
+        <div style="text-align:right">
+          <button id="followToggle" class="follow-btn">Follow</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="userTweets" style="margin-top:12px"></div>
+  </section>
+
+  <aside>
+    <div class="panel">
+      <h4 style="margin:0 0 8px 0">Profile Options</h4>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <button class="follow-btn" onclick="copyProfileLink()">Copy profile link</button>
+        <button style="background:transparent;border:1px solid rgba(255,255,255,0.04);color:var(--muted)" onclick="window.location.href='login.html'">Switch user</button>
+        <button style="background:transparent;border:1px solid rgba(255,255,255,0.04);color:var(--muted)" id="deleteAccount">Delete account</button>
+      </div>
+    </div>
+  </aside>
+</main>
+
+<script>
+function getLS(k){ try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}}
+function setLS(k,v){ localStorage.setItem(k,JSON.stringify(v)) }
+function id(){ return 'i'+Date.now().toString(36)+Math.random().toString(36).slice(2,6) }
+function timeAgo(ts){
+  const s = Math.floor((Date.now()-ts)/1000);
+  if(s<60) return s+'s';
+  const m=Math.floor(s/60); if(m<60) return m+'m';
+  const h=Math.floor(m/60); if(h<24) return h+'h';
+  const d=Math.floor(h/24); return d+'d';
+}
+const params = new URLSearchParams(window.location.search);
+const handle = params.get('user');
+const users = getLS('mt_users')||[];
+let tweets = getLS('mt_tweets')||[];
+const profile = users.find(u=>u.handle===handle) || users.find(u=>u.id===getLS('mt_current'));
+if(!profile){ alert('User not found'); window.location.href='index.html' }
+
+function renderProfile(){
+  document.getElementById('profileName').textContent = profile.name;
+  document.getElementById('profileHandle').textContent = '@' + profile.handle;
+  document.getElementById('profileBio').textContent = profile.bio || '';
+  const av = document.getElementById('profileAvatar'); av.textContent = profile.name.split(' ').map(s=>s[0]).slice(0,2).join(''); av.style.background = profile.avatarColor;
+  const userTweets = (getLS('mt_tweets')||[]).filter(t=>t.userId===profile.id).sort((a,b)=>b.ts-a.ts);
+  document.getElementById('pTweets').textContent = userTweets.length;
+  document.getElementById('pFollowers').textContent = (profile.followers||[]).length;
+  document.getElementById('pFollowing').textContent = (profile.following||[]).length;
+  const utEl = document.getElementById('userTweets'); utEl.innerHTML='';
+  if(userTweets.length===0) utEl.innerHTML = `<div class="panel small" style="color:var(--muted)">No tweets yet.</div>`;
+  userTweets.forEach(t=>{
+    const div = document.createElement('div');
+    div.className='tweet panel';
+    div.style.marginBottom='10px';
+    div.innerHTML = `<div style="display:flex;justify-content:space-between">
+      <div><strong>${profile.name}</strong> <span class="small">@${profile.handle} · ${timeAgo(t.ts)}</span></div>
+      <div class="small">${t.likes.length} ❤️ · ${t.comments.length} 💬</div>
+    </div>
+    <div style="margin-top:8px">${escapeHtml(t.text)}</div>`;
+    utEl.appendChild(div);
+  });
+
+  // follow button state
+  const meId = getLS('mt_current');
+  const me = (getLS('mt_users')||[]).find(u=>u.id===meId);
+  const btn = document.getElementById('followToggle');
+  if(profile.id===meId){ btn.style.display='none' }
+  else {
+    btn.style.display='inline-block';
+    btn.textContent = (me.following||[]).includes(profile.id) ? 'Unfollow' : 'Follow';
+    btn.onclick = ()=>{ toggleFollow(profile.id); renderProfile(); renderHeaderFeed(); }
+  }
+}
+function toggleFollow(targetId){
+  let users = getLS('mt_users')||[];
+  const meId = getLS('mt_current');
+  const me = users.find(u=>u.id===meId);
+  const target = users.find(u=>u.id===targetId);
+  if(me.following.includes(targetId)){
+    me.following = me.following.filter(x=>x!==targetId);
+    target.followers = target.followers.filter(x=>x!==meId);
+  } else {
+    me.following.push(targetId);
+    target.followers.push(meId);
+  }
+  setLS('mt_users', users);
+}
+
+function copyProfileLink(){
+  const url = window.location.origin + window.location.pathname + '?user=' + profile.handle;
+  navigator.clipboard?.writeText(url).then(()=> alert('Profile link copied'));
+}
+
+function escapeHtml(s){ return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;') }
+
+/* Edit profile dialog */
+document.getElementById('editProfileBtn').addEventListener('click', ()=>{
+  const meId = getLS('mt_current');
+  if(meId !== profile.id){ alert('You can only edit your own profile.'); return; }
+  const nm = prompt('Name', profile.name);
+  if(nm===null) return;
+  const bio = prompt('Bio', profile.bio||'');
+  if(bio===null) return;
+  let users = getLS('mt_users')||[];
+  users = users.map(u => u.id===profile.id ? {...u, name: nm.trim()||u.name, bio: bio.trim()} : u);
+  setLS('mt_users', users);
+  profile.name = nm.trim();
+  profile.bio = bio.trim();
+  renderProfile();
+});
+
+/* Delete account */
+document.getElementById('deleteAccount').addEventListener('click', ()=>{
+  const meId = getLS('mt_current');
+  if(meId !== profile.id){ alert('You can only delete your own account.'); return; }
+  if(!confirm('Delete your account? This cannot be undone.')) return;
+  let users = getLS('mt_users')||[];
+  users = users.filter(u=>u.id!==meId).map(u=>({ ...u, followers:(u.followers||[]).filter(f=>f!==meId), following:(u.following||[]).filter(f=>f!==meId) }));
+  let tweets = (getLS('mt_tweets')||[]).filter(t=>t.userId!==meId);
+  setLS('mt_users', users);
+  setLS('mt_tweets', tweets);
+  // switch to first user
+  if(users.length>0) setLS('mt_current', users[0].id);
+  else { localStorage.removeItem('mt_current'); }
+  window.location.href='login.html';
+});
+
+/* small helper to trigger header updates on feed if open */
+function renderHeaderFeed(){ /* dummy: feed page will re-read on load */ }
+
+renderProfile();
+</script>
+</body>
+</html>
